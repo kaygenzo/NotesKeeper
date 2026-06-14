@@ -16,10 +16,16 @@ interface NoteDao {
         LEFT JOIN sub_notes ON sub_notes.note_id = notes.id AND sub_notes.status = 'AVAILABLE'
         WHERE notes.status = 'AVAILABLE'
         GROUP BY notes.id
-        ORDER BY notes.date_millis DESC, notes.created_at DESC
+        ORDER BY notes.position ASC, notes.date_millis DESC, notes.created_at DESC
         """,
     )
     fun observeNotesWithSubNoteCount(): Flow<List<NoteWithSubNoteCount>>
+
+    @Query("SELECT MAX(position) FROM notes")
+    suspend fun getMaxPosition(): Int?
+
+    @Query("UPDATE notes SET position = :position WHERE id = :noteId")
+    suspend fun updatePosition(noteId: Long, position: Int)
 
     @Query(
         """

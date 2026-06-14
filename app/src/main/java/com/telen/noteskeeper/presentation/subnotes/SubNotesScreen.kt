@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.Card
@@ -35,15 +37,20 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.telen.noteskeeper.presentation.common.DragDropState
 import com.telen.noteskeeper.presentation.common.EmptyState
 import com.telen.noteskeeper.presentation.common.EmptySubNotesVector
 import com.telen.noteskeeper.presentation.common.SwipeToRevealDeleteBox
+import com.telen.noteskeeper.presentation.common.dragHandle
+import com.telen.noteskeeper.presentation.common.draggedItem
+import com.telen.noteskeeper.presentation.common.rememberDragDropState
 import com.telen.noteskeeper.presentation.theme.NotesKeeperTheme
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -152,6 +159,7 @@ private fun SubNotesContent(
                     onDeleteSubNote = { subNote ->
                         onEvent(SubNotesUiEvent.OnDeleteSubNoteRequest(subNote.id, subNote.name))
                     },
+                    onMoveSubNote = { from, to -> onEvent(SubNotesUiEvent.OnMoveSubNote(from, to)) }
                 )
             }
         }
@@ -170,17 +178,40 @@ private fun SubNotesList(
     subNotes: List<SubNoteItemUi>,
     onSubNoteClick: (subNoteId: Long) -> Unit,
     onDeleteSubNote: (subNote: SubNoteItemUi) -> Unit,
+    onMoveSubNote: (fromIndex: Int, toIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val lazyListState = rememberLazyListState()
+    val dragDropState = rememberDragDropState(lazyListState, onMoveSubNote)
+    val revealedIds = remember { mutableStateListOf<Long>() }
+    val isAnyItemRevealed = revealedIds.isNotEmpty()
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = lazyListState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = subNotes, key = { it.id }) { subNote ->
-            SwipeToRevealDeleteBox(onDeleteClick = { onDeleteSubNote(subNote) }) {
+        itemsIndexed(items = subNotes, key = { _, subNote -> subNote.id }) { index, subNote ->
+            val dragging = index == dragDropState.draggingItemIndex
+            SwipeToRevealDeleteBox(
+                onDeleteClick = { onDeleteSubNote(subNote) },
+                onExpandedChanged = { expanded ->
+                    if (expanded) {
+                        if (subNote.id !in revealedIds) revealedIds.add(subNote.id)
+                    } else {
+                        revealedIds.remove(subNote.id)
+                    }
+                },
+                modifier = Modifier.draggedItem(
+                    if (dragging) dragDropState.draggedDistance else 0f
+                )
+            ) { _ ->
                 SubNoteItem(
+                    index = index,
                     subNote = subNote,
+                    dragDropState = dragDropState,
+                    reorderEnabled = !isAnyItemRevealed,
                     onClick = { onSubNoteClick(subNote.id) },
                 )
             }
@@ -190,7 +221,10 @@ private fun SubNotesList(
 
 @Composable
 private fun SubNoteItem(
+    index: Int,
     subNote: SubNoteItemUi,
+    dragDropState: DragDropState,
+    reorderEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -204,6 +238,19 @@ private fun SubNoteItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Drag to reorder",
+                modifier = Modifier
+                    .then(if (reorderEnabled) Modifier.dragHandle(index, dragDropState) else Modifier)
+                    .padding(end = 16.dp),
+                tint = if (reorderEnabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                },
+            )
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = subNote.name,
@@ -232,6 +279,7 @@ private fun SubNoteItem(
                     }
                 }
             }
+
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -292,7 +340,10 @@ private fun SubNotesContentWithSubNotesPreview() {
 private fun SubNoteItemPreview() {
     NotesKeeperTheme {
         SubNoteItem(
+            index = 0,
             subNote = SubNoteItemUi(id = 1, name = "Vegetables", photoCount = 2, hasText = true),
+            dragDropState = rememberDragDropState(rememberLazyListState()) { _, _ -> },
+            reorderEnabled = true,
             onClick = {},
         )
     }

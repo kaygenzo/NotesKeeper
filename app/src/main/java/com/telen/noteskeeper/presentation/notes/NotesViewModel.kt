@@ -7,6 +7,7 @@ import com.telen.noteskeeper.domain.model.NoteStatus
 import com.telen.noteskeeper.domain.usecase.CreateNoteUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveNotesUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateNoteStatusUseCase
+import com.telen.noteskeeper.domain.usecase.UpdateNotesOrderUseCase
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -27,6 +28,7 @@ class NotesViewModel(
     private val observeNotes: ObserveNotesUseCase,
     private val createNote: CreateNoteUseCase,
     private val updateNoteStatus: UpdateNoteStatusUseCase,
+    private val updateNotesOrder: UpdateNotesOrderUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -72,6 +74,24 @@ class NotesViewModel(
             is NotesUiEvent.OnDeleteNoteRequest -> onDeleteNoteRequest(event)
 
             NotesUiEvent.OnUndoDeleteNote -> onUndoDeleteNote()
+
+            is NotesUiEvent.OnMoveNote -> onMoveNote(event.fromIndex, event.toIndex)
+        }
+    }
+
+    private fun onMoveNote(fromIndex: Int, toIndex: Int) {
+        val currentNotes = _uiState.value.notes
+        if (fromIndex !in currentNotes.indices || toIndex !in currentNotes.indices) return
+
+        val newList = currentNotes.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+
+        _uiState.update { it.copy(notes = newList) }
+
+        viewModelScope.launch {
+            runCatching { updateNotesOrder(newList.map { it.id }) }
+                .onFailure { Timber.e(it, "Unable to update notes order") }
         }
     }
 

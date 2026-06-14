@@ -9,4 +9,5 @@ sealed interface NotesUiEvent {
     data object OnOptionsClick : NotesUiEvent
     data class OnDeleteNoteRequest(val noteId: Long, val title: String) : NotesUiEvent
     data object OnUndoDeleteNote : NotesUiEvent
+    data class OnMoveNote(val fromIndex: Int, val toIndex: Int) : NotesUiEvent
 }

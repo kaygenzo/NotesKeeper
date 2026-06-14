@@ -33,4 +33,6 @@ data class SubNoteEntity(
     val createdAtMillis: Long,
     @ColumnInfo(name = "status")
     val status: NoteStatus = NoteStatus.AVAILABLE,
+    @ColumnInfo(name = "position")
+    val position: Int = 0,
 )

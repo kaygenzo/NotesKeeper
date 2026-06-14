@@ -24,8 +24,10 @@ import com.telen.noteskeeper.domain.usecase.ObserveSubNoteDetailUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveSubNotesUseCase
 import com.telen.noteskeeper.domain.usecase.PreparePhotoCaptureUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateNoteStatusUseCase
+import com.telen.noteskeeper.domain.usecase.UpdateNotesOrderUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNoteStatusUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNoteTextUseCase
+import com.telen.noteskeeper.domain.usecase.UpdateSubNotesOrderUseCase
 import com.telen.noteskeeper.presentation.notes.NotesViewModel
 import com.telen.noteskeeper.presentation.subnotedetail.SubNoteDetailViewModel
 import com.telen.noteskeeper.presentation.subnotes.SubNotesViewModel
@@ -71,13 +73,15 @@ val useCaseModule = module {
     factory { CancelPhotoCaptureUseCase(get()) }
     factory { DeletePhotoUseCase(get()) }
     factory { UpdateNoteStatusUseCase(get()) }
+    factory { UpdateNotesOrderUseCase(get()) }
     factory { UpdateSubNoteStatusUseCase(get()) }
+    factory { UpdateSubNotesOrderUseCase(get()) }
     factory { CleanupDatabaseUseCase(get(), get()) }
 }
 
 val viewModelModule = module {
-    viewModel { NotesViewModel(get(), get(), get()) }
-    viewModel { params -> SubNotesViewModel(params.get(), get(), get(), get(), get()) }
+    viewModel { NotesViewModel(get(), get(), get(), get()) }
+    viewModel { params -> SubNotesViewModel(params.get(), get(), get(), get(), get(), get()) }
     viewModel { params ->
         SubNoteDetailViewModel(
             subNoteId = params.get(),

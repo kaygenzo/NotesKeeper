@@ -20,4 +20,7 @@ interface NoteRepository {
 
     /** Permanently deletes notes marked as DELETED. */
     suspend fun deletePermanently()
+
+    /** Updates the order of notes. */
+    suspend fun updateNotesOrder(noteIds: List<Long>)
 }

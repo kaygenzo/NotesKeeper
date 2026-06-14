@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,15 +34,20 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.telen.noteskeeper.presentation.common.DragDropState
 import com.telen.noteskeeper.presentation.common.EmptyNotesVector
 import com.telen.noteskeeper.presentation.common.EmptyState
 import com.telen.noteskeeper.presentation.common.SwipeToRevealDeleteBox
+import com.telen.noteskeeper.presentation.common.dragHandle
+import com.telen.noteskeeper.presentation.common.draggedItem
+import com.telen.noteskeeper.presentation.common.rememberDragDropState
 import com.telen.noteskeeper.presentation.theme.NotesKeeperTheme
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -143,6 +150,7 @@ private fun NotesContent(
                     onDeleteNote = { note ->
                         onEvent(NotesUiEvent.OnDeleteNoteRequest(note.id, note.title))
                     },
+                    onMoveNote = { from, to -> onEvent(NotesUiEvent.OnMoveNote(from, to)) },
                 )
             }
         }
@@ -163,17 +171,40 @@ private fun NotesList(
     notes: List<NoteItemUi>,
     onNoteClick: (noteId: Long) -> Unit,
     onDeleteNote: (note: NoteItemUi) -> Unit,
+    onMoveNote: (fromIndex: Int, toIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val lazyListState = rememberLazyListState()
+    val dragDropState = rememberDragDropState(lazyListState, onMoveNote)
+    val revealedIds = remember { mutableStateListOf<Long>() }
+    val isAnyItemRevealed = revealedIds.isNotEmpty()
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = lazyListState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = notes, key = { it.id }) { note ->
-            SwipeToRevealDeleteBox(onDeleteClick = { onDeleteNote(note) }) {
+        itemsIndexed(items = notes, key = { _, note -> note.id }) { index, note ->
+            val dragging = index == dragDropState.draggingItemIndex
+            SwipeToRevealDeleteBox(
+                onDeleteClick = { onDeleteNote(note) },
+                onExpandedChanged = { expanded ->
+                    if (expanded) {
+                        if (note.id !in revealedIds) revealedIds.add(note.id)
+                    } else {
+                        revealedIds.remove(note.id)
+                    }
+                },
+                modifier = Modifier.draggedItem(
+                    if (dragging) dragDropState.draggedDistance else 0f
+                )
+            ) { _ ->
                 NoteItem(
+                    index = index,
                     note = note,
+                    dragDropState = dragDropState,
+                    reorderEnabled = !isAnyItemRevealed,
                     onClick = { onNoteClick(note.id) },
                 )
             }
@@ -183,7 +214,10 @@ private fun NotesList(
 
 @Composable
 private fun NoteItem(
+    index: Int,
     note: NoteItemUi,
+    dragDropState: DragDropState,
+    reorderEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -197,6 +231,19 @@ private fun NoteItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Drag to reorder",
+                modifier = Modifier
+                    .then(if (reorderEnabled) Modifier.dragHandle(index, dragDropState) else Modifier)
+                    .padding(end = 16.dp),
+                tint = if (reorderEnabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                },
+            )
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = note.title,
@@ -267,7 +314,10 @@ private fun NotesContentWithNotesPreview() {
 private fun NoteItemPreview() {
     NotesKeeperTheme {
         NoteItem(
+            index = 0,
             note = NoteItemUi(id = 1, title = "Grocery list", formattedDate = "Jun 12, 2026", subNoteCount = 3),
+            dragDropState = rememberDragDropState(rememberLazyListState()) { _, _ -> },
+            reorderEnabled = true,
             onClick = {},
         )
     }

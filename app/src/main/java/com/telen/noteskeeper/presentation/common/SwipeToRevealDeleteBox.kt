@@ -24,12 +24,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -47,7 +49,8 @@ import kotlinx.coroutines.launch
 fun SwipeToRevealDeleteBox(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+    onExpandedChanged: (Boolean) -> Unit = {},
+    content: @Composable (isRevealed: Boolean) -> Unit,
 ) {
     val density = LocalDensity.current
     val deleteButtonWidth = 72.dp
@@ -55,19 +58,30 @@ fun SwipeToRevealDeleteBox(
     val offsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
+    val isRevealed = offsetX.value != 0f
+    DisposableEffect(isRevealed) {
+        onExpandedChanged(isRevealed)
+        onDispose {
+            if (isRevealed) onExpandedChanged(false)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Max),
     ) {
+        // Red background with delete icon, only visible when swiped.
+        val alpha = if (offsetX.value == 0f) 0f else 1f
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .width(deleteButtonWidth)
                 .fillMaxHeight()
+                .graphicsLayer { this.alpha = alpha }
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.error)
-                .clickable(onClick = onDeleteClick),
+                .clickable(enabled = alpha > 0f, onClick = onDeleteClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -105,7 +119,7 @@ fun SwipeToRevealDeleteBox(
                     },
                 ),
         ) {
-            content()
+            content(isRevealed)
         }
     }
 }

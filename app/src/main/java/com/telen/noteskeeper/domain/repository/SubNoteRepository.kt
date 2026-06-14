@@ -27,4 +27,7 @@ interface SubNoteRepository {
 
     /** Permanently deletes sub notes marked as DELETED. */
     suspend fun deletePermanently()
+
+    /** Updates the order of sub notes. */
+    suspend fun updateSubNotesOrder(subNoteIds: List<Long>)
 }

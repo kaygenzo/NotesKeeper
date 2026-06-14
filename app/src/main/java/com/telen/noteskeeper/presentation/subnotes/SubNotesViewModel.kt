@@ -8,6 +8,7 @@ import com.telen.noteskeeper.domain.usecase.CreateSubNoteUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveNoteUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveSubNotesUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNoteStatusUseCase
+import com.telen.noteskeeper.domain.usecase.UpdateSubNotesOrderUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -26,6 +27,7 @@ class SubNotesViewModel(
     observeSubNotes: ObserveSubNotesUseCase,
     private val createSubNote: CreateSubNoteUseCase,
     private val updateSubNoteStatus: UpdateSubNoteStatusUseCase,
+    private val updateSubNotesOrder: UpdateSubNotesOrderUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SubNotesUiState())
@@ -71,6 +73,24 @@ class SubNotesViewModel(
             is SubNotesUiEvent.OnDeleteSubNoteRequest -> onDeleteSubNoteRequest(event)
 
             SubNotesUiEvent.OnUndoDeleteSubNote -> onUndoDeleteSubNote()
+
+            is SubNotesUiEvent.OnMoveSubNote -> onMoveSubNote(event.fromIndex, event.toIndex)
+        }
+    }
+
+    private fun onMoveSubNote(fromIndex: Int, toIndex: Int) {
+        val currentSubNotes = _uiState.value.subNotes
+        if (fromIndex !in currentSubNotes.indices || toIndex !in currentSubNotes.indices) return
+
+        val newList = currentSubNotes.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+
+        _uiState.update { it.copy(subNotes = newList) }
+
+        viewModelScope.launch {
+            runCatching { updateSubNotesOrder(newList.map { it.id }) }
+                .onFailure { Timber.e(it, "Unable to update sub notes order") }
         }
     }
 

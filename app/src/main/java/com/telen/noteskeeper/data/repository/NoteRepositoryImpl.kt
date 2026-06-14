@@ -30,11 +30,13 @@ class NoteRepositoryImpl(
 
     override suspend fun createNote(title: String, dateMillis: Long): Long =
         withContext(dispatcherProvider.io) {
+            val maxPosition = noteDao.getMaxPosition() ?: -1
             noteDao.insert(
                 NoteEntity(
                     title = title,
                     dateMillis = dateMillis,
                     createdAtMillis = clock(),
+                    position = maxPosition + 1,
                 ),
             )
         }
@@ -47,5 +49,12 @@ class NoteRepositoryImpl(
     override suspend fun deletePermanently() =
         withContext(dispatcherProvider.io) {
             noteDao.deleteMarkedAsDeleted()
+        }
+
+    override suspend fun updateNotesOrder(noteIds: List<Long>) =
+        withContext(dispatcherProvider.io) {
+            noteIds.forEachIndexed { index, id ->
+                noteDao.updatePosition(id, index)
+            }
         }
 }

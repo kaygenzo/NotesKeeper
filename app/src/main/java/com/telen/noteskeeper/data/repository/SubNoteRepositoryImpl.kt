@@ -36,11 +36,13 @@ class SubNoteRepositoryImpl(
 
     override suspend fun createSubNote(noteId: Long, name: String): Long =
         withContext(dispatcherProvider.io) {
+            val maxPosition = subNoteDao.getMaxPosition(noteId) ?: -1
             subNoteDao.insert(
                 SubNoteEntity(
                     noteId = noteId,
                     name = name,
                     createdAtMillis = clock(),
+                    position = maxPosition + 1,
                 ),
             )
         }
@@ -69,5 +71,12 @@ class SubNoteRepositoryImpl(
                 }
             }
             subNoteDao.deleteMarkedAsDeleted()
+        }
+
+    override suspend fun updateSubNotesOrder(subNoteIds: List<Long>) =
+        withContext(dispatcherProvider.io) {
+            subNoteIds.forEachIndexed { index, id ->
+                subNoteDao.updatePosition(id, index)
+            }
         }
 }

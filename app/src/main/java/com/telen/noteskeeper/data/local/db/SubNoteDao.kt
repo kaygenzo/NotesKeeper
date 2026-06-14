@@ -17,10 +17,16 @@ interface SubNoteDao {
         LEFT JOIN photos ON photos.sub_note_id = sub_notes.id
         WHERE sub_notes.note_id = :noteId AND sub_notes.status = 'AVAILABLE'
         GROUP BY sub_notes.id
-        ORDER BY sub_notes.created_at ASC
+        ORDER BY sub_notes.position ASC, sub_notes.created_at ASC
         """,
     )
     fun observeSubNotesWithPhotoCount(noteId: Long): Flow<List<SubNoteWithPhotoCount>>
+
+    @Query("SELECT MAX(position) FROM sub_notes WHERE note_id = :noteId")
+    suspend fun getMaxPosition(noteId: Long): Int?
+
+    @Query("UPDATE sub_notes SET position = :position WHERE id = :subNoteId")
+    suspend fun updatePosition(subNoteId: Long, position: Int)
 
     @Transaction
     @Query("SELECT * FROM sub_notes WHERE id = :subNoteId AND status = 'AVAILABLE'")

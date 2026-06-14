@@ -9,4 +9,5 @@ sealed interface SubNotesUiEvent {
     data object OnBackClick : SubNotesUiEvent
     data class OnDeleteSubNoteRequest(val subNoteId: Long, val name: String) : SubNotesUiEvent
     data object OnUndoDeleteSubNote : SubNotesUiEvent
+    data class OnMoveSubNote(val fromIndex: Int, val toIndex: Int) : SubNotesUiEvent
 }
