@@ -9,6 +9,7 @@ import com.telen.noteskeeper.domain.usecase.DeletePhotoUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveSubNoteDetailUseCase
 import com.telen.noteskeeper.domain.usecase.PreparePhotoCaptureUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNoteTextUseCase
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class SubNoteDetailViewModel(
@@ -74,17 +76,27 @@ class SubNoteDetailViewModel(
             is SubNoteDetailUiEvent.OnPhotoClick ->
                 sendEffect(SubNoteDetailEffect.OpenPhoto(event.uri))
 
-            SubNoteDetailUiEvent.OnBackClick ->
+            SubNoteDetailUiEvent.OnBackClick -> {
+                saveEditedText()
                 sendEffect(SubNoteDetailEffect.NavigateBack)
+            }
         }
     }
 
     private fun onSaveClick() {
-        viewModelScope.launch {
+        saveEditedText()
+        _uiState.update { it.copy(isEditing = false) }
+    }
+
+    private fun saveEditedText() {
+        if (_uiState.value.isEditing) {
             val editedText = _uiState.value.editedText
-            runCatching { updateSubNoteText(subNoteId, editedText) }
-                .onFailure { Timber.e(it, "Unable to save sub note text") }
-            _uiState.update { it.copy(isEditing = false) }
+            viewModelScope.launch {
+                withContext(NonCancellable) {
+                    runCatching { updateSubNoteText(subNoteId, editedText) }
+                        .onFailure { Timber.e(it, "Unable to save sub note text") }
+                }
+            }
         }
     }
 
