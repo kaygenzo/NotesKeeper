@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.telen.noteskeeper.data.work.DatabaseCleanupWorker
 import com.telen.noteskeeper.di.appModules
@@ -19,6 +20,7 @@ class NotesKeeperApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        FirebaseApp.initializeApp(this)
         setupLogging()
         setupKoin()
         setupWorkManager()
