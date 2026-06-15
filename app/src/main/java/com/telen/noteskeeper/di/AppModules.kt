@@ -6,18 +6,23 @@ import com.telen.noteskeeper.core.DispatcherProvider
 import com.telen.noteskeeper.data.local.db.AppDatabase
 import com.telen.noteskeeper.data.local.file.PhotoFileStorage
 import com.telen.noteskeeper.data.remote.HttpClientFactory
+import com.telen.noteskeeper.data.repository.BackupRepositoryImpl
 import com.telen.noteskeeper.data.repository.NoteRepositoryImpl
 import com.telen.noteskeeper.data.repository.PhotoRepositoryImpl
 import com.telen.noteskeeper.data.repository.SubNoteRepositoryImpl
+import com.telen.noteskeeper.domain.repository.BackupRepository
 import com.telen.noteskeeper.domain.repository.NoteRepository
 import com.telen.noteskeeper.domain.repository.PhotoRepository
 import com.telen.noteskeeper.domain.repository.SubNoteRepository
 import com.telen.noteskeeper.domain.usecase.CancelPhotoCaptureUseCase
 import com.telen.noteskeeper.domain.usecase.CleanupDatabaseUseCase
+import com.telen.noteskeeper.domain.usecase.ClearAllDataUseCase
 import com.telen.noteskeeper.domain.usecase.ConfirmPhotoCaptureUseCase
 import com.telen.noteskeeper.domain.usecase.CreateNoteUseCase
 import com.telen.noteskeeper.domain.usecase.CreateSubNoteUseCase
 import com.telen.noteskeeper.domain.usecase.DeletePhotoUseCase
+import com.telen.noteskeeper.domain.usecase.ExportDataUseCase
+import com.telen.noteskeeper.domain.usecase.ImportDataUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveNoteUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveNotesUseCase
 import com.telen.noteskeeper.domain.usecase.ObserveSubNoteDetailUseCase
@@ -29,6 +34,7 @@ import com.telen.noteskeeper.domain.usecase.UpdateSubNoteStatusUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNoteTextUseCase
 import com.telen.noteskeeper.domain.usecase.UpdateSubNotesOrderUseCase
 import com.telen.noteskeeper.presentation.notes.NotesViewModel
+import com.telen.noteskeeper.presentation.options.OptionsViewModel
 import com.telen.noteskeeper.presentation.subnotedetail.SubNoteDetailViewModel
 import com.telen.noteskeeper.presentation.subnotes.SubNotesViewModel
 import org.koin.android.ext.koin.androidContext
@@ -58,6 +64,7 @@ val repositoryModule = module {
     single<NoteRepository> { NoteRepositoryImpl(get(), get()) }
     single<SubNoteRepository> { SubNoteRepositoryImpl(get(), get(), get()) }
     single<PhotoRepository> { PhotoRepositoryImpl(get(), get(), get()) }
+    single<BackupRepository> { BackupRepositoryImpl(get(), get(), get(), get(), get()) }
 }
 
 val useCaseModule = module {
@@ -77,6 +84,9 @@ val useCaseModule = module {
     factory { UpdateSubNoteStatusUseCase(get()) }
     factory { UpdateSubNotesOrderUseCase(get()) }
     factory { CleanupDatabaseUseCase(get(), get()) }
+    factory { ExportDataUseCase(get(), get()) }
+    factory { ImportDataUseCase(get(), androidContext()) }
+    factory { ClearAllDataUseCase(get()) }
 }
 
 val viewModelModule = module {
@@ -93,6 +103,7 @@ val viewModelModule = module {
             deletePhoto = get(),
         )
     }
+    viewModel { OptionsViewModel(get(), get(), get()) }
 }
 
 val appModules = listOf(

@@ -49,4 +49,10 @@ interface SubNoteDao {
 
     @Query("DELETE FROM sub_notes WHERE status = 'DELETED'")
     suspend fun deleteMarkedAsDeleted()
+
+    @Query("SELECT * FROM sub_notes WHERE note_id = :noteId AND status = 'AVAILABLE'")
+    suspend fun getAllSubNotes(noteId: Long): List<SubNoteEntity>
+
+    @Query("DELETE FROM sub_notes")
+    suspend fun clear()
 }

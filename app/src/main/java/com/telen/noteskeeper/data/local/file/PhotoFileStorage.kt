@@ -35,6 +35,14 @@ class PhotoFileStorage(private val context: Context) {
         return !file.exists() || file.delete()
     }
 
+    /** Deletes all photo files. */
+    fun clearAllFiles() {
+        photosDir.listFiles()?.forEach { it.delete() }
+    }
+
+    /** Returns the file for a given fileName. */
+    fun getFile(fileName: String): File = File(photosDir, fileName)
+
     private companion object {
         const val PHOTOS_DIR = "photos"
     }

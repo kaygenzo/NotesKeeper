@@ -22,4 +22,10 @@ interface PhotoDao {
 
     @Query("DELETE FROM photos WHERE id = :photoId")
     suspend fun delete(photoId: Long)
+
+    @Query("SELECT * FROM photos")
+    suspend fun getAllPhotos(): List<PhotoEntity>
+
+    @Query("DELETE FROM photos")
+    suspend fun clear()
 }

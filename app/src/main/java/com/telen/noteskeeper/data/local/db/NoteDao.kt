@@ -46,4 +46,10 @@ interface NoteDao {
 
     @Query("DELETE FROM notes WHERE status = 'DELETED'")
     suspend fun deleteMarkedAsDeleted()
+
+    @Query("SELECT * FROM notes WHERE status = 'AVAILABLE'")
+    suspend fun getAllNotes(): List<NoteEntity>
+
+    @Query("DELETE FROM notes")
+    suspend fun clear()
 }
