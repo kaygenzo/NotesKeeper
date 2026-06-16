@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -43,6 +44,12 @@ val generateDevKeystore by tasks.registering {
     }
 }
 
+val keystoreProperties = Properties()
+keystoreProperties.setProperty("storeFile", "../telen.release.jks")
+keystoreProperties.setProperty("storePassword", System.getenv("KEYSTORE_PASSWORD").orEmpty())
+keystoreProperties.setProperty("keyAlias", System.getenv("KEY_ALIAS").orEmpty())
+keystoreProperties.setProperty("keyPassword", System.getenv("KEY_PASSWORD").orEmpty())
+
 android {
     namespace = "com.telen.noteskeeper"
     compileSdk = 36
@@ -63,6 +70,13 @@ android {
             keyAlias = devKeyAlias
             keyPassword = devKeyPassword
         }
+
+        create("release") {
+            storeFile = file(keystoreProperties.getProperty("storeFile"))
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+        }
     }
 
     buildTypes {
@@ -72,7 +86,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("dev")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

@@ -51,3 +51,11 @@ com.telen.noteskeeper
 ```
 
 Coverage: all domain use cases, all repository implementations (DAOs and file storage mocked with MockK, test dispatcher, injectable fixed clock), all DAOs via in-memory Room database (Robolectric), and the background worker.
+
+## CI/CD
+
+| Workflow | Trigger condition | Jobs (in order) |
+|---|---|---|
+| `nightly` | Scheduled, every night at 02:00 CET, `develop` branch only | unit-tests → build-android-tests → build-debug |
+| `pipeline-branch` | Push to any branch | unit-tests → build-android-tests → build-prod |
+| `pipeline-tag` | Tag matching `v*` | build-prod → deploy-alpha |

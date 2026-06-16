@@ -1,0 +1,152 @@
+version: 2.1
+
+orbs:
+  android: circleci/android@2.5.0
+
+parameters:
+  android_image:
+    type: string
+    default: "kaygenzo/android-fastlane:36"
+
+executors:
+  android:
+    docker:
+      - image: << pipeline.parameters.android_image >>
+    resource_class: large
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - run:
+          name: Initialize all configuration files
+          command: |
+              echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+              echo $DEBUG_KEYSTORE_FILE | base64 -d > telen.debug.jks
+              echo $KEYSTORE_FILE | base64 -d > telen.release.jks
+              echo $PLAY_STORE_CREDENTIALS | base64 -d > play-store-credentials.json
+      - android/restore-gradle-cache
+
+  cleanup:
+    steps:
+      - run:
+          name: Delete sensitive files
+          command: |
+            rm -f telen.debug.jks telen.release.jks
+            rm -f app/google-services.json
+            rm -f play-store-credentials.json
+          when: always
+
+# Nightly at 02:00 CET (Paris winter = UTC+1).
+# CircleCI cron is always UTC, so during CEST (summer, UTC+2) this fires at 03:00 Paris time.
+workflows:
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 1 * * *"
+          filters:
+            branches:
+              only:
+                - develop
+    jobs:
+      - unit-tests
+      - build-android-tests:
+          requires:
+            - unit-tests
+      - build-debug:
+          requires:
+            - build-android-tests
+
+  pipeline-branch:
+    jobs:
+      - unit-tests
+      - build-android-tests:
+          requires:
+            - unit-tests
+      - build-prod:
+          requires:
+            - build-android-tests
+
+  pipeline-tag:
+    jobs:
+      - build-prod:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - deploy-alpha:
+          requires:
+            - build-prod
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+jobs:
+  build-debug:
+    executor: android
+    steps:
+      - setup
+      - run:
+          name: Assemble debug APK
+          command: ./gradlew assembleDebug
+      - android/save-gradle-cache
+      - store_artifacts:
+          path: app/build/outputs/apk/debug
+      - cleanup
+
+  build-prod:
+    executor: android
+    steps:
+      - setup
+      - run:
+          name: Assemble release APK
+          command: ./gradlew assembleRelease
+      - android/save-gradle-cache
+      - store_artifacts:
+          path: app/build/outputs/apk/release
+      - cleanup
+
+  deploy-alpha:
+    executor: android
+    steps:
+      - setup
+      - run:
+          name: Deploy release APK on Play Store
+          command: | 
+            ./gradlew bundleRelease
+            bundle install
+            bundle exec fastlane deploy_to_alpha
+      - android/save-gradle-cache
+      - store_artifacts:
+          path: app/build/outputs/mapping/release/mapping.txt
+          destination: release/mapping.txt
+      - cleanup
+
+  unit-tests:
+    executor: android
+    steps:
+      - setup
+      - run:
+          name: Run unit tests
+          command: ./gradlew testDebugUnitTest
+      - android/save-gradle-cache
+      - store_test_results:
+          path: app/build/test-results
+      - store_artifacts:
+          path: app/build/reports/tests/testDebugUnitTest
+      - cleanup
+
+  build-android-tests:
+    executor: android
+    steps:
+      - setup
+      - run:
+          name: Build Android instrumentation tests APK
+          command: ./gradlew assembleDebug assembleDebugAndroidTest
+      - android/save-gradle-cache
+      - store_artifacts:
+          path: app/build/outputs/apk/androidTest/debug
+      - cleanup
