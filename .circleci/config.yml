@@ -22,7 +22,6 @@ commands:
           name: Initialize all configuration files
           command: |
               echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
-              echo $DEBUG_KEYSTORE_FILE | base64 -d > telen.debug.jks
               echo $KEYSTORE_FILE | base64 -d > telen.release.jks
               echo $PLAY_STORE_CREDENTIALS | base64 -d > play-store-credentials.json
       - android/restore-gradle-cache
@@ -32,7 +31,7 @@ commands:
       - run:
           name: Delete sensitive files
           command: |
-            rm -f telen.debug.jks telen.release.jks
+            rm -f telen.release.jks
             rm -f app/google-services.json
             rm -f play-store-credentials.json
           when: always
