@@ -58,8 +58,8 @@ android {
         applicationId = "com.telen.noteskeeper"
         minSdk = 23
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 101
+        versionName = "1.0.1"
         testInstrumentationRunner = "com.telen.noteskeeper.TestRunner"
     }
 
